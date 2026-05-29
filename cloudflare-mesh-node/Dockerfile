@@ -10,7 +10,7 @@ ARG BUILD_ARCH=amd64
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates=20240203 \
+        ca-certificates \
         curl=7.88.1-10+deb12u8 \
         dnsutils=1:9.18.33-1~deb12u2 \
         ethtool=1:6.1-1 \
