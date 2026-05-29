@@ -1,0 +1,43 @@
+#!/bin/bash
+# ==============================================================================
+# Generate WARP status HTML page
+# ==============================================================================
+
+mkdir -p /var/www/html
+
+status_output=$(warp-cli --accept-tos status 2>/dev/null || echo "WARP daemon not responding")
+settings_output=$(warp-cli --accept-tos settings 2>/dev/null || echo "Unable to retrieve settings")
+routes_output=$(ip route show dev CloudflareWARP 2>/dev/null || echo "No routes via WARP interface")
+
+cat > /var/www/html/index.html <<HTMLEOF
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cloudflare WARP Mesh Node Status</title>
+  <meta http-equiv="refresh" content="10">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #f48120; }
+    h2 { color: #fbbf24; margin-top: 30px; }
+    pre { background: #16213e; padding: 20px; border-radius: 8px; overflow-x: auto; border: 1px solid #0f3460; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header { display: flex; align-items: center; gap: 15px; }
+    .refresh-note { color: #6b7280; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>&#9729; Cloudflare WARP Mesh Node</h1>
+    </div>
+    <p class="refresh-note">Auto-refreshes every 10 seconds</p>
+    <h2>Connection Status</h2>
+    <pre>${status_output}</pre>
+    <h2>Settings</h2>
+    <pre>${settings_output}</pre>
+    <h2>Routes</h2>
+    <pre>${routes_output}</pre>
+  </div>
+</body>
+</html>
+HTMLEOF

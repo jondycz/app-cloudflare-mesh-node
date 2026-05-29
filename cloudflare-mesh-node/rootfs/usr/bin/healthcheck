@@ -1,0 +1,50 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+export LOG_FD
+
+# This script treats the following situations unhealthy:
+# - warp-cli status reports "Disconnected"
+# - if once was online but gets offline for more than HEALTHCHECK_OFFLINE_TIMEOUT seconds
+# - if never gets online for more than HEALTHCHECK_RESTART_TIMEOUT seconds
+
+# Redirect outputs to the log (&1 and &2 are not initialized by Docker)
+exec &> /proc/1/fd/1
+if [[ "${LOG_FD:-}" =~ ^[0-9]+$ ]]; then
+  eval "exec ${LOG_FD}>&1" || true
+fi
+
+readonly HEALTHCHECK_OFFLINE_TIMEOUT=300   # 5 minutes
+readonly HEALTHCHECK_RESTART_TIMEOUT=3600  # 1 hour
+
+declare warp_status
+declare is_connected
+# STARTED_TIMESTAMP is in contenv at /var/run/s6/container_environment
+# LAST_ONLINE_TIMESTAMP is in contenv at /var/run/s6/container_environment
+
+if ! bashio::var.has_value "${STARTED_TIMESTAMP-}"
+then
+  STARTED_TIMESTAMP=$(date +"%s")
+  printf "${STARTED_TIMESTAMP}" > /var/run/s6/container_environment/STARTED_TIMESTAMP
+fi
+
+warp_status=$(warp-cli --accept-tos status 2>/dev/null || echo "")
+is_connected="false"
+if echo "${warp_status}" | grep -q "Connected"; then
+  is_connected="true"
+fi
+
+if bashio::var.true "${is_connected}"
+then
+  LAST_ONLINE_TIMESTAMP=$(date +"%s")
+  printf "${LAST_ONLINE_TIMESTAMP}" > /var/run/s6/container_environment/LAST_ONLINE_TIMESTAMP
+fi
+
+if (echo "${warp_status}" | grep -q "Registration Missing") || \
+  (bashio::var.has_value "${LAST_ONLINE_TIMESTAMP-}" && \
+    (( $(date +"%s") - ${LAST_ONLINE_TIMESTAMP} > ${HEALTHCHECK_OFFLINE_TIMEOUT} )) ) || \
+  (! bashio::var.has_value "${LAST_ONLINE_TIMESTAMP-}" && \
+    (( $(date +"%s") - ${STARTED_TIMESTAMP} > ${HEALTHCHECK_RESTART_TIMEOUT} )) )
+then
+  # Unhealthy
+  bashio::exit.nok
+fi

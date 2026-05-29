@@ -1,0 +1,116 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+export LOG_FD
+# ==============================================================================
+# Home Assistant Community App: Cloudflare WARP Mesh Node
+# Forward incoming WARP connections to the host's primary interface
+# ==============================================================================
+
+declare from_address_ipv4 from_address_ipv6
+declare to_address_ipv4 to_address_ipv6
+
+# Return address without prefix, or error if not forwardable
+function get_forwardable_address() {
+  local address=${1}
+  local ipinfo
+
+  if ! bashio::var.has_value "${address}"; then
+    return 1
+  fi
+
+  # Check if forwarding for the address family is enabled
+  if [[ "${address}" =~ .*:.* ]]; then
+    if [[ $(</proc/sys/net/ipv6/conf/all/forwarding) -eq 0 ]]; then
+      return 1
+    fi
+  else
+    if [[ $(</proc/sys/net/ipv4/ip_forward) -eq 0 ]]; then
+      return 1
+    fi
+  fi
+
+  if ! ipinfo="$(ipcalc --json "${address}")"; then
+    bashio::log.debug "Address ${address} is not valid: ${ipinfo}"
+    return 1
+  fi
+
+  bashio::jq "${ipinfo}" '.ADDRESS'
+}
+
+# Host's IP addresses, it never fails, but can return empty
+function get_host_address() {
+  local ip_version="${1}"
+
+  if ! bashio::var.equals "$(bashio::network.${ip_version}_method)" "disabled"; then
+    for address in $(bashio::network.${ip_version}_address); do
+      if get_forwardable_address "${address}"; then
+        break
+      else
+        bashio::log.debug "Skipping non-forwardable ${ip_version} address: ${address}"
+      fi
+    done
+  fi
+}
+
+# Get the WARP interface IP address
+function get_warp_address() {
+  local ip_version="${1}"
+  local addr
+
+  if [[ "${ip_version}" == "ipv4" ]]; then
+    addr=$(ip -4 addr show dev CloudflareWARP 2>/dev/null | grep -oP 'inet \K[^/]+' | head -1)
+  else
+    addr=$(ip -6 addr show dev CloudflareWARP 2>/dev/null | grep -oP 'inet6 \K[^/]+' | grep -v '^fe80' | head -1)
+  fi
+
+  if bashio::var.has_value "${addr}"; then
+    echo "${addr}"
+  fi
+}
+
+# Forward incoming WARP connections to the host's primary interface
+function setup_forwarding() {
+  local cmd="${1}"
+  local ip_version="${2}"
+  local address_bits="${3}"
+  local from_address="${4}"
+  local to_address="${5}"
+
+  if bashio::var.has_value "${from_address}" && bashio::var.has_value "${to_address}"; then
+    bashio::log.info \
+      "Forwarding incoming WARP connections directed to ${from_address} to the host's ${to_address} address (${ip_version})"
+    if ${cmd} -t nat -S PREROUTING \
+      | grep -Eq "^-A PREROUTING -d ${from_address}/${address_bits} -j DNAT --to-destination ${to_address}$"
+    then
+      bashio::log.notice "Forwarding is already set (${ip_version})"
+    else
+      if ! ${cmd} -t nat -A PREROUTING -d "${from_address}" -j DNAT --to-destination "${to_address}"; then
+        bashio::log.warning "Setting up forwarding is unsuccessful (${ip_version})"
+      fi
+    fi
+  fi
+}
+
+if ! bashio::api.supervisor GET "/network/interface/default/info" false &> /dev/null; then
+  bashio::log.warning \
+    "The host has no primary (default) interface, can't forward incoming WARP connections to the host." \
+    "Restart of the app is required after the issue is fixed!"
+else
+  # WARP interface IP addresses
+  from_address_ipv4=$(get_warp_address "ipv4")
+  from_address_ipv6=$(get_warp_address "ipv6")
+
+  if ! bashio::var.has_value "${from_address_ipv4}"; then
+    bashio::log.warning "Failed to retrieve WARP IPv4 address"
+  fi
+  if ! bashio::var.has_value "${from_address_ipv6}"; then
+    bashio::log.debug "No WARP IPv6 address available"
+  fi
+
+  # Host's IP addresses
+  to_address_ipv4=$(get_host_address "ipv4")
+  to_address_ipv6=$(get_host_address "ipv6")
+
+  setup_forwarding "iptables" "IPv4" "32" "${from_address_ipv4-}" "${to_address_ipv4}"
+  setup_forwarding "ip6tables" "IPv6" "128" "${from_address_ipv6-}" "${to_address_ipv6}"
+fi

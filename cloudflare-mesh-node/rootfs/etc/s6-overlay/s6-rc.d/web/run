@@ -1,0 +1,22 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+export LOG_FD
+# ==============================================================================
+# Home Assistant Community App: Cloudflare WARP Mesh Node
+# Runs the WARP status web interface
+# ==============================================================================
+
+bashio::log.info 'Starting WARP status web server...'
+
+# Create a simple status page directory
+mkdir -p /var/www/html
+
+# Generate initial status page
+/usr/bin/warp-status-page
+
+# Start a background loop to regenerate the status page
+(while true; do sleep 10; /usr/bin/warp-status-page; done) &
+
+# Serve via python3 http.server on port 8099
+cd /var/www/html
+exec python3 -m http.server 8099 --bind 127.0.0.1

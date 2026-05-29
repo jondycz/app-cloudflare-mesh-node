@@ -1,0 +1,131 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+export LOG_FD
+# ==============================================================================
+# Home Assistant Community App: Cloudflare WARP Mesh Node
+# Runs after warp-svc is started - registers and configures the connector
+# ==============================================================================
+declare connector_token
+declare -a routes=()
+declare -a colliding_routes=()
+declare route
+declare warp_status
+
+bashio::log.info 'Configuring Cloudflare WARP connector...'
+
+# Wait for warp-svc to be ready (socket available)
+while ! warp-cli --accept-tos status &>/dev/null; do
+  bashio::log.info "Waiting for warp-svc to be ready..."
+  sleep 2
+done
+
+bashio::log.info "warp-svc is ready"
+
+# Get connector token
+connector_token=$(bashio::config "connector_token")
+if ! bashio::var.has_value "${connector_token}"; then
+  bashio::exit.nok "No connector token configured. Please set 'connector_token' in the add-on configuration."
+fi
+
+# Check if already registered
+warp_status=$(warp-cli --accept-tos status 2>/dev/null || true)
+if echo "${warp_status}" | grep -q "Registration Missing"; then
+  bashio::log.info "Registering WARP connector..."
+  if ! warp-cli --accept-tos registration new --token "${connector_token}"; then
+    bashio::exit.nok "Failed to register WARP connector. Check your connector token."
+  fi
+  bashio::log.info "WARP connector registered successfully"
+else
+  bashio::log.info "WARP connector already registered"
+fi
+
+# Connect if not already connected
+warp_status=$(warp-cli --accept-tos status 2>/dev/null || true)
+if echo "${warp_status}" | grep -q "Disconnected"; then
+  bashio::log.info "Connecting WARP..."
+  if ! warp-cli --accept-tos connect; then
+    bashio::exit.nok "Failed to connect WARP"
+  fi
+fi
+
+# Wait for connection to be established
+declare wait_count=0
+while ! warp-cli --accept-tos status 2>/dev/null | grep -q "Connected"; do
+  if (( wait_count++ > 60 )); then
+    bashio::exit.nok "Timed out waiting for WARP connection"
+  fi
+  bashio::log.info "Waiting for WARP connection..."
+  sleep 2
+done
+
+bashio::log.info "Cloudflare WARP is connected"
+
+# Enable IP forwarding (required for connector/routing mode)
+echo 1 > /proc/sys/net/ipv4/ip_forward
+if [[ -f /proc/sys/net/ipv6/conf/all/forwarding ]]; then
+  echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+fi
+bashio::log.info "IP forwarding enabled"
+
+# Configure override virtual networks if specified
+declare -a override_networks
+readarray -t override_networks < <(bashio::config "override_virtual_networks")
+for network in "${override_networks[@]}"; do
+  if bashio::var.has_value "${network}"; then
+    bashio::log.info "Configuring override virtual network: ${network}"
+    warp-cli --accept-tos tunnel vnet --add "${network}" || \
+      bashio::log.warning "Failed to add virtual network: ${network}"
+  fi
+done
+
+# Set up SNAT for subnet routes if enabled
+if bashio::config.true "snat_subnet_routes"; then
+  readarray -t routes < <(subnet-routes advertised)
+  for route in "${routes[@]}"; do
+    if bashio::var.has_value "${route}"; then
+      if [[ "${route}" =~ .*:.* ]]; then
+        if ! ip6tables -t nat -C POSTROUTING -s "${route}" -o CloudflareWARP -j MASQUERADE 2>/dev/null; then
+          bashio::log.info "Setting up SNAT for ${route} (IPv6)"
+          ip6tables -t nat -A POSTROUTING -s "${route}" -o CloudflareWARP -j MASQUERADE || \
+            bashio::log.warning "Failed to set up SNAT for ${route}"
+        fi
+      else
+        if ! iptables -t nat -C POSTROUTING -s "${route}" -o CloudflareWARP -j MASQUERADE 2>/dev/null; then
+          bashio::log.info "Setting up SNAT for ${route} (IPv4)"
+          iptables -t nat -A POSTROUTING -s "${route}" -o CloudflareWARP -j MASQUERADE || \
+            bashio::log.warning "Failed to set up SNAT for ${route}"
+        fi
+      fi
+    fi
+  done
+fi
+
+# Log the advertised routes for informational purposes
+readarray -t routes < <(subnet-routes advertised)
+if (( ${#routes[@]} > 0 )); then
+  bashio::log.info "Local subnet routes available for Cloudflare routing:"
+  for route in "${routes[@]}"; do
+    if bashio::var.has_value "${route}"; then
+      bashio::log.info "  ${route}"
+    fi
+  done
+  bashio::log.notice \
+    "Configure these routes in the Cloudflare Zero Trust dashboard under" \
+    "Networks > Routes to make them accessible via the WARP connector."
+fi
+
+# Warn about colliding routes if accepting routes is enabled
+if bashio::config.true "accept_routes"; then
+  bashio::log.info "Accept routes is enabled - traffic from Cloudflare network will be routed to local subnets"
+fi
+
+# Linux optimizations for routing performance
+# Enable UDP GRO forwarding on the WARP interface if available
+declare interface="CloudflareWARP"
+if ip link show "${interface}" &>/dev/null; then
+  bashio::log.info "Enabling UDP GRO for forwarding on ${interface}"
+  ethtool -K "${interface}" rx-udp-gro-forwarding on rx-gro-list off 2>/dev/null || \
+    bashio::log.debug "UDP GRO optimization not available on ${interface}"
+fi
+
+bashio::log.info "Cloudflare WARP Mesh Node is fully configured and running"

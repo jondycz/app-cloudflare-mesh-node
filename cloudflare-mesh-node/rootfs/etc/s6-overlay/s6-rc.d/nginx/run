@@ -1,0 +1,13 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+export LOG_FD
+# ==============================================================================
+# Home Assistant Community App: Cloudflare WARP Mesh Node
+# Runs the Nginx daemon
+# ==============================================================================
+
+# Wait for the WARP status web page to become available
+bashio::net.wait_for 8099 localhost 900
+
+bashio::log.info "Starting NGinx..."
+exec nginx

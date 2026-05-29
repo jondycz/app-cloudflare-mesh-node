@@ -1,0 +1,26 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+export LOG_FD
+# ==============================================================================
+# Home Assistant Community App: Cloudflare WARP Mesh Node
+# Runs warp-svc (Cloudflare WARP daemon)
+# ==============================================================================
+
+readonly WARPSVC_LOGLEVEL_NOTICE="WARP logs will be suppressed after 200 lines, set app's configuration option 'log_level' to 'debug' to see further logs"
+readonly WARPSVC_LOGLEVEL_MESSAGE="[further warp-svc logs suppressed, set app's configuration option 'log_level' to 'debug' to see further warp-svc logs]"
+
+bashio::log.info 'Starting Cloudflare WARP daemon...'
+
+# Ensure state directory exists
+mkdir -p /var/lib/cloudflare-warp
+
+# Run warp-svc
+if bashio::debug ; then
+  exec warp-svc
+else
+  bashio::log.notice "${WARPSVC_LOGLEVEL_NOTICE}"
+  warp-svc 2>&1 \
+    | stdbuf -i0 -oL -eL \
+      sed -n -e '1,200p' \
+        -e "201c${WARPSVC_LOGLEVEL_MESSAGE}"
+fi
