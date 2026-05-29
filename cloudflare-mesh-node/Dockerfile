@@ -29,7 +29,7 @@ RUN \
         > /etc/apt/sources.list.d/cloudflare-client.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        cloudflare-warp=2024.6.497-1 \
+        cloudflare-warp \
     \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
