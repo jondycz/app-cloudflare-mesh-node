@@ -9,7 +9,9 @@ on:
     types: 
      - published
 
-permissions: {}
+permissions:
+  contents: write
+  packages: read
 
 jobs:
   deploy:
@@ -39,5 +41,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/jondycz/app-cloudflare-mesh-node:latest
-            ghcr.io/jondycz/app-cloudflare-mesh-node:${{ github.sha }}
+            ghcr.io/${{ github.actor }}/app-cloudflare-mesh-node:latest
+            ghcr.io/${{ github.actor }}/app-cloudflare-mesh-node:${{ github.sha }}

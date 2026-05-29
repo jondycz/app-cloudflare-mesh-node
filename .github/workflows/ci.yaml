@@ -39,6 +39,9 @@ jobs:
           file: ./cloudflare-mesh-node/Dockerfile
           push: false
           platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ github.actor }}/app-cloudflare-mesh-node:latest
+            ghcr.io/${{ github.actor }}/app-cloudflare-mesh-node:${{ github.sha }}
 
       - name: Lint YAML
         uses: ibiqlik/action-yamllint@v3
