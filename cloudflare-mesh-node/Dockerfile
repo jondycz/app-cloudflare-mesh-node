@@ -11,17 +11,17 @@ RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
-        curl=7.88.1-10+deb12u8 \
-        dnsutils=1:9.18.33-1~deb12u2 \
-        ethtool=1:6.1-1 \
-        gnupg=2.2.40-1.1 \
-        ipcalc=0.51-1 \
-        iproute2=6.1.0-3 \
-        iptables=1.8.9-2 \
-        net-tools=2.10-0.1 \
-        nginx=1.22.1-9 \
-        procps=2:4.0.2-3 \
-        network-manager=1.42.4-1 \
+        curl \
+        dnsutils \
+        ethtool \
+        gnupg \
+        ipcalc \
+        iproute2 \
+        iptables \
+        net-tools \
+        nginx \
+        procps \
+        network-manager \
     \
     && curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg \
         | gpg --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg \
