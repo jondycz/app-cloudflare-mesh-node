@@ -6,6 +6,8 @@ export LOG_FD
 # - warp-cli status reports "Disconnected"
 # - if once was online but gets offline for more than HEALTHCHECK_OFFLINE_TIMEOUT seconds
 # - if never gets online for more than HEALTHCHECK_RESTART_TIMEOUT seconds
+#
+# Applies to Cloudflare WARP mesh node connectivity
 
 # Redirect outputs to the log (&1 and &2 are not initialized by Docker)
 exec &> /proc/1/fd/1

@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 export LOG_FD
 # ==============================================================================
-# Add local subnets to ip rules with higher priority than WARP's routing
+# Add local subnets to ip rules with higher priority than Cloudflare WARP's routing
 # ==============================================================================
 
 readonly PROTECTION_RULE_PRIORITY=5000
@@ -24,7 +24,7 @@ if [[ "${1-}" != "tested" ]]; then
   bashio::cache.flush_all
   # Test both networking and config Supervisor API availability
   while ! bashio::api.supervisor GET "/network/interface/default/info" false &> /dev/null || \
-    ! bashio::api.supervisor GET "/addons/self/options/config" false &> /dev/null
+    ! bashio::api.supervisor GET "/apps/self/options/config" false &> /dev/null
   do
     if (( wait_counter++ == WAIT_COUNT )); then
       bashio::exit.nok "Supervisor is unreachable"

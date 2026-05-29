@@ -1,80 +1,70 @@
-# Home Assistant Community App: Tailscale
 
-[![GitHub Release][releases-shield]][releases]
-![Project Stage][project-stage-shield]
-[![License][license-shield]](LICENSE.md)
+# Cloudflare WARP Mesh Node
 
-![Supports aarch64 Architecture][aarch64-shield]
-![Supports amd64 Architecture][amd64-shield]
+[![GitHub Release](https://img.shields.io/github/release/jondycz/app-cloudflare-mesh-node.svg)](https://github.com/jondycz/app-cloudflare-mesh-node/releases)
+![Project Stage](https://img.shields.io/badge/project%20stage-experimental-yellow.svg)
+[![License](https://img.shields.io/github/license/jondycz/app-cloudflare-mesh-node.svg)](LICENSE.md)
 
-[![Github Actions][github-actions-shield]][github-actions]
-![Project Maintenance][maintenance-shield]
-[![GitHub Activity][commits-shield]][commits]
+![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
+![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
 
-[![Discord][discord-shield]][discord]
-[![Community Forum][forum-shield]][forum]
+[![GitHub Actions](https://github.com/jondycz/app-cloudflare-mesh-node/workflows/CI/badge.svg)](https://github.com/jondycz/app-cloudflare-mesh-node/actions)
+![Project Maintenance](https://img.shields.io/maintenance/yes/2026.svg)
+[![GitHub Activity](https://img.shields.io/github/commit-activity/y/jondycz/app-cloudflare-mesh-node.svg)](https://github.com/jondycz/app-cloudflare-mesh-node/commits/main)
 
-[![Sponsor Frenck via GitHub Sponsors][github-sponsors-shield]][github-sponsors]
-
-[![Support Frenck on Patreon][patreon-shield]][patreon]
-
-Zero config VPN for building secure networks.
+Cloudflare WARP mesh connector for secure, zero-trust networking between containers, VMs, and physical hosts. Provides automatic NAT, subnet routing, and app connector functionality using Cloudflare Zero Trust.
 
 ## About
 
-Tailscale is a zero config VPN, which installs on any device in minutes,
-including your Home Assistant instance.
+This project provides a containerized Cloudflare WARP mesh node, designed to function as a drop-in replacement for Tailscale-based mesh VPNs. It enables:
 
-Create a secure network between your servers, computers, and cloud instances.
-Even when separated by firewalls or subnets, Tailscale just works. Tailscale
-manages firewall rules for you, and works from anywhere you are.
+- Secure, zero-config mesh networking using Cloudflare WARP and Zero Trust
+- Automatic NAT and subnet routing for local networks
+- App connector mode for secure application access
+- Simple status web UI for monitoring
 
-[:books: Read the full app documentation][docs]
+**Features:**
+- Cloudflare WARP registration and connection via `warp-svc` and `warp-cli`
+- Accept and advertise subnet routes
+- SNAT for subnet routes
+- App connector support
+- Status web UI on port 8099
 
-## Support
+See [:books: Full documentation](cloudflare-mesh-node/DOCS.md) for details.
 
-Got questions?
 
-You have several options to get them answered:
+## Usage
 
-- The [Home Assistant Community Apps Discord chat server][discord] for app
-  support and feature requests.
-- The [Home Assistant Discord chat server][discord-ha] for general Home
-  Assistant discussions and questions.
-- The Home Assistant [Community Forum][forum].
-- Join the [Reddit subreddit][reddit] in [/r/homeassistant][reddit]
+1. **Configure**: Edit `cloudflare-mesh-node/config.yaml` with your Cloudflare WARP connector token and desired options (see below).
+2. **Build & Run**: Use the provided Dockerfile to build and run the container, or deploy via your preferred orchestrator.
+3. **Register**: The container will register with Cloudflare WARP using your token and connect automatically.
+4. **Monitor**: Access the status web UI at `http://<container-ip>:8099` for connection and routing status.
 
-You could also [open an issue here][issue] GitHub.
+## Configuration
+
+All configuration is handled via `cloudflare-mesh-node/config.yaml`. Key options:
+
+- `connector_token`: Cloudflare WARP Zero Trust connector token (required)
+- `accept_routes`: Accept routes from other mesh nodes (default: true)
+- `advertise_routes`: List of subnets or `local_subnets` to advertise
+- `snat_subnet_routes`: Enable SNAT for advertised subnets (default: true)
+- `log_level`: Logging verbosity (default: info)
+
+See [cloudflare-mesh-node/config.yaml](cloudflare-mesh-node/config.yaml) and [cloudflare-mesh-node/DOCS.md](cloudflare-mesh-node/DOCS.md) for full details.
+
 
 ## Contributing
 
-This is an active open-source project. We are always open to people who want to
-use the code or contribute to it.
-
-We have set up a separate document containing our
-[contribution guidelines](.github/CONTRIBUTING.md).
-
-Thank you for being involved! :heart_eyes:
-
-## Authors & contributors
-
-The original setup of this repository is by [Franck Nijhof][frenck].
-
-For a full list of all authors and contributors,
-check [the contributor's page][contributors].
-
-## We have got some Home Assistant apps for you
-
-Want some more functionality to your Home Assistant instance?
-
-We have created multiple apps for Home Assistant. For a full list, check out
-our [GitHub Repository][repository].
+Contributions, bug reports, and feature requests are welcome! Please open issues or pull requests on [GitHub](https://github.com/jondycz/app-cloudflare-mesh-node).
 
 ## License
 
+## License
+
+
 MIT License
 
-Copyright (c) 2021-2026 Franck Nijhof
+Copyright (c) 2024-present jondycz
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -94,29 +84,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-[aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
-[amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
-[commits-shield]: https://img.shields.io/github/commit-activity/y/hassio-addons/app-tailscale.svg
-[commits]: https://github.com/hassio-addons/app-tailscale/commits/main
-[contributors]: https://github.com/hassio-addons/app-tailscale/graphs/contributors
-[discord-ha]: https://discord.gg/c5DvZ4e
-[discord-shield]: https://img.shields.io/discord/478094546522079232.svg
-[discord]: https://discord.me/hassioaddons
-[docs]: https://github.com/hassio-addons/app-tailscale/blob/main/tailscale/DOCS.md
-[forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg
-[forum]: https://community.home-assistant.io/?u=frenck
-[frenck]: https://github.com/frenck
-[github-actions-shield]: https://github.com/hassio-addons/app-tailscale/workflows/CI/badge.svg
-[github-actions]: https://github.com/hassio-addons/app-tailscale/actions
-[github-sponsors-shield]: https://frenck.dev/wp-content/uploads/2019/12/github_sponsor.png
-[github-sponsors]: https://github.com/sponsors/frenck
-[issue]: https://github.com/hassio-addons/app-tailscale/issues
-[license-shield]: https://img.shields.io/github/license/hassio-addons/app-tailscale.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg
-[patreon-shield]: https://frenck.dev/wp-content/uploads/2019/12/patreon.png
-[patreon]: https://www.patreon.com/frenck
-[project-stage-shield]: https://img.shields.io/badge/project%20stage-experimental-yellow.svg
-[reddit]: https://reddit.com/r/homeassistant
-[releases-shield]: https://img.shields.io/github/release/hassio-addons/app-tailscale.svg
+
 [releases]: https://github.com/hassio-addons/app-tailscale/releases
 [repository]: https://github.com/hassio-addons/repository

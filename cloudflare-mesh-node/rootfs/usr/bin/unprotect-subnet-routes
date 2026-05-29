@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 export LOG_FD
 # ==============================================================================
-# Remove local subnets from ip rules
+# Remove local subnets from ip rules for Cloudflare WARP mesh
 # ==============================================================================
 readonly PROTECTION_RULE_PRIORITY=5000
 

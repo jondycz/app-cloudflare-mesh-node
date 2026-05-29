@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 export LOG_FD
 # ==============================================================================
-# Print possible subnet routes to stdout
+# Print possible subnet routes to stdout for Cloudflare WARP mesh
 # ==============================================================================
 declare interface
 declare -a addresses=()
@@ -15,6 +15,7 @@ function appendarray() {
   local -n array=${1}
   readarray -t -O "${#array[@]}" array
 }
+
 
 if ! [[ "${1-}" =~ ^(local|advertised)$ ]]; then
   echo "Usage: $(basename "$0") local|advertised" 1>&2
