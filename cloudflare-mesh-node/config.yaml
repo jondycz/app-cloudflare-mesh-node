@@ -25,6 +25,7 @@ devices:
 map:
   - type: share
     read_only: false
+options:
   connector_token: ""
   accept_routes: true
   advertise_routes:
@@ -38,6 +39,8 @@ schema:
   advertise_routes:
     - "match(^(?:local_subnets|(?:(?:25[0-5]|(?:2[0-4]|1\\d|[1-9]?)\\d)\\.){3}(?:25[0-5]|(?:2[0-4]|1\\d|[1-9]?)\\d)\\/(?:3[0-2]|[12]?\\d)|[a-fA-F\\d.:]+:[a-fA-F\\d.:]+\\/(?:12[0-8]|(?:1[01]|[1-9]?)\\d))$)"  # Subnets or local_subnets to advertise
   snat_subnet_routes: bool
-  log_level: list(trace|debug|info|notice|warning|error|fatal)
+  log_level: info
   override_virtual_networks:
-    - str?
+    type: list
+    items:
+      type: str
