@@ -34,8 +34,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: cloudflare-mesh-node/Dockerfile
+          context: ./cloudflare-mesh-node
+          file: ./cloudflare-mesh-node/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
